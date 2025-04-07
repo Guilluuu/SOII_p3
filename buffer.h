@@ -1,7 +1,7 @@
 #ifndef BUFFER_H
 #define BUFFER_H
 
-#define BSIZE 64
+#define BSIZE 1024 * 1024
 
 typedef struct
 {
@@ -10,6 +10,8 @@ typedef struct
     char *out_ptr;
     char *in_ptr;
 } Buffer;
+
+void buffer_setsize(int n);
 
 char buffer_add(char);
 

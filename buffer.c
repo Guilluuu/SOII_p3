@@ -5,6 +5,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define abs(a) (((a) > 0) ? (a) : -(a))
+
+static int insert_idx = 0;
+
 Buffer char_buf = (Buffer){
     .out_ptr = char_buf.data,
     .in_ptr  = char_buf.data,
@@ -59,6 +63,7 @@ char buffer_add(char kp)
     }
     *char_buf.in_ptr = kp;
     __move_ptr(&char_buf.in_ptr, 1);
+    insert_idx++;
 
     return kp;
 }
@@ -77,6 +82,7 @@ char buffer_pop()
     *char_buf.out_ptr = 0;
 
     __move_ptr(&char_buf.out_ptr, 1);
+    insert_idx--;
 
     return kp;
 }
@@ -84,7 +90,7 @@ char buffer_pop()
 void buffer_print()
 {
     printf("Buff: ");
-    for (int i = 0; i < BSIZE; i++)
+    for (int i = 0; i < char_buf.length; i++)
     {
         if (__valid_char(char_buf.data[i]))
             printf("%c,", char_buf.data[i]);
@@ -94,12 +100,12 @@ void buffer_print()
 
 inline char buffer_top() { return *char_buf.out_ptr; }
 
-int buffer_get_in_index()
-{
-    return (int) (char_buf.in_ptr - char_buf.data) - 1;
-}
+int buffer_get_in_index() { return insert_idx - 1; }
 
-int buffer_get_out_index()
+int buffer_get_out_index() { return 0; }
+
+void buffer_setsize(int n)
 {
-    return (int) (char_buf.out_ptr - char_buf.data) - 1;
+    assert(n <= char_buf.length);
+    char_buf.length = n;
 }
