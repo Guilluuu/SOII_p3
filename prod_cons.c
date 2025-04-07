@@ -17,16 +17,16 @@ static int CONS_N;
 int insert = 0;
 int delete = 0;
 
-pthread_mutex_t stdin_mutex;
+pthread_mutex_t stdin_mutex, mutex;
 
 pthread_barrier_t barrier;
+pthread_cond_t    condp, condc;
 
 char produce_item() { return ((rand() % 26) + 65); }
 
-void *main_productor(void *arg)
+int get_file()
 {
     char filename[32];
-
     pthread_mutex_lock(&stdin_mutex);
     printf("P\t Archivo: ");
     fgets(filename, sizeof(filename) - 1, stdin);
@@ -41,13 +41,25 @@ void *main_productor(void *arg)
     assert(fd >= 0);
 
     pthread_barrier_wait(&barrier);
+    return fd;
+}
+
+void *main_productor(void *arg)
+{
+    int fd = get_file();
 
     for (int i = 0; i < ITERS; i++)
     {
         char elemento = produce_item();
+        pthread_mutex_lock(&mutex);
+        while (buffer_is_full())
+            pthread_cond_wait(&condp, &mutex);
         buffer_add(elemento);
         printf("Produciendo [%c] en %d\n", elemento, buffer_get_in_index());
         buffer_print();
+
+        pthread_cond_broadcast(&condc); // Probar con signal
+        pthread_mutex_unlock(&mutex);
 
 
         sleep(SLEEPTIME);
@@ -59,32 +71,21 @@ void *main_productor(void *arg)
 
 void *main_consumidor(void *arg)
 {
-    char filename[32];
-    pthread_mutex_lock(&stdin_mutex);
-    printf("C\t Archivo: ");
-    fgets(filename, sizeof(filename) - 1, stdin);
-    pthread_mutex_unlock(&stdin_mutex);
-
-    char *c;
-    // Trim \n
-    if ((c = strchr(filename, '\n')))
-        *c = '\0';
-
-    int fd = open(filename, O_CREAT | O_TRUNC | O_WRONLY, 0600);
-    assert(fd >= 0);
-
-    pthread_barrier_wait(&barrier);
+    int fd = get_file();
 
     for (int i = 0; i < ITERS; i++)
     {
-        char e;
-        do
-        {
-            e = buffer_pop();
-        } while (e == 0);
-
-        printf("Consumiendo [%c] en %d\n", e, buffer_get_out_index());
+        char elemento;
+        pthread_mutex_lock(&mutex);
+        while (buffer_is_empty())
+            pthread_cond_wait(&condc, &mutex);
+        buffer_add(elemento);
+        printf("Produciendo [%c] en %d\n", elemento, buffer_get_in_index());
         buffer_print();
+
+        pthread_cond_broadcast(&condp); // Probar con signal
+        pthread_mutex_unlock(&mutex);
+
 
         sleep(SLEEPTIME);
     }
@@ -113,6 +114,8 @@ int main(int argc, char *argv[])
 
     pthread_barrier_init(&barrier, NULL, PROD_N + CONS_N);
     pthread_mutex_init(&stdin_mutex, NULL);
+    pthread_cond_init(pthread_cond_t *restrict cond,
+                      const pthread_condattr_t *restrict cond_attr)
 
     // Crea
     for (int i = 0; i < PROD_N; i++)

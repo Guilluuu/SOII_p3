@@ -23,5 +23,9 @@ int buffer_get_in_index();
 
 int buffer_get_out_index();
 
+int buffer_is_full();
+
+int buffer_is_empty();
+
 
 #endif

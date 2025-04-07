@@ -12,14 +12,17 @@ Buffer char_buf = (Buffer){
     .data    = { 0 },
 };
 
-static pthread_mutex_t mutex;
-
 static inline int __out_of_bounds(char *ptr)
 {
     return ptr - char_buf.data >= char_buf.length && ptr >= char_buf.data;
 }
 
 int __valid_char(char item) { return item; }
+
+inline int buffer_is_full() { return (__valid_char(*char_buf.in_ptr)); }
+
+inline int buffer_is_empty() { return (!__valid_char(*char_buf.out_ptr)); }
+
 
 static char *__move_forward(char **ptr)
 {
@@ -50,38 +53,31 @@ static char *__move_ptr(char **ptr, int n)
 
 char buffer_add(char kp)
 {
-    pthread_mutex_lock(&mutex);
-
-    if (__valid_char(*char_buf.in_ptr))
+    if (buffer_is_full())
     {
-        pthread_mutex_unlock(&mutex);
         return 0;
     }
-
     *char_buf.in_ptr = kp;
     __move_ptr(&char_buf.in_ptr, 1);
 
-    pthread_mutex_unlock(&mutex);
     return kp;
 }
 
 char buffer_pop()
 {
     char kp;
-    pthread_mutex_lock(&mutex);
 
-    if (!__valid_char(*char_buf.out_ptr))
+    if (buffer_is_empty())
     {
-        pthread_mutex_unlock(&mutex);
         return 0;
     }
+
 
     kp                = *char_buf.out_ptr;
     *char_buf.out_ptr = 0;
 
     __move_ptr(&char_buf.out_ptr, 1);
 
-    pthread_mutex_unlock(&mutex);
     return kp;
 }
 
